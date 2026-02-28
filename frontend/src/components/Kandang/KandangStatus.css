@@ -1,0 +1,83 @@
+.kandang-status {
+    background: white;
+    border-radius: 10px;
+    padding: 15px 20px;
+    margin-bottom: 20px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.kandang-status.loading {
+    color: #999;
+    text-align: center;
+    padding: 20px;
+}
+
+.status-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 10px;
+}
+
+.status-icon {
+    font-size: 1.4rem;
+}
+
+.status-icon.online {
+    color: #4CAF50;
+}
+
+.status-icon.warning {
+    color: #FFC107;
+}
+
+.status-icon.offline {
+    color: #999;
+}
+
+.status-text {
+    font-size: 1rem;
+    font-weight: 500;
+}
+
+.status-text.online {
+    color: #4CAF50;
+}
+
+.status-text.offline {
+    color: #666;
+}
+
+.status-details {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 20px;
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px solid #f0f0f0;
+}
+
+.detail-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.detail-label {
+    color: #666;
+    font-size: 0.85rem;
+}
+
+.detail-value {
+    color: #333;
+    font-size: 0.9rem;
+    font-weight: 500;
+}
+
+.detail-value.battery {
+    color: #4CAF50;
+}
+
+.detail-value.battery.low {
+    color: #f44336;
+}

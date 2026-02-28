@@ -1,0 +1,162 @@
+.register-container {
+    display: flex;
+    width: 100vw;
+    height: 100vh;
+    overflow: hidden;
+}
+
+/* Left side - Image Section (sama dengan login) */
+.register-image-section {
+    flex: 1.2;
+    position: relative;
+    background: linear-gradient(135deg, #f5f6f5 0%, #f7faf7 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+}
+
+.image-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: radial-gradient(circle at center, transparent 0%, rgba(0,0,0,0.3) 100%);
+    z-index: 1;
+}
+
+.kukang-image {
+    position: relative;
+    max-width: 80%;
+    max-height: 80%;
+    object-fit: contain;
+    z-index: 2;
+    filter: drop-shadow(0 10px 20px rgba(0,0,0,0.3));
+    animation: float 6s ease-in-out infinite;
+}
+
+@keyframes float {
+    0% { transform: translateY(0px); }
+    50% { transform: translateY(-20px); }
+    100% { transform: translateY(0px); }
+}
+
+.image-text {
+    position: absolute;
+    bottom: 50px;
+    left: 0;
+    right: 0;
+    text-align: center;
+    color: white;
+    z-index: 3;
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+}
+
+/* Right side - Form Section */
+.register-form-section {
+    flex: 0.8;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+    padding: 2rem;
+}
+
+.register-form {
+    background: white;
+    padding: 3rem 2.5rem;
+    border-radius: 20px;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+    width: 100%;
+    max-width: 450px;
+    max-height: 90vh;
+    overflow-y: auto;
+}
+
+.register-form::-webkit-scrollbar {
+    width: 6px;
+}
+
+.register-form::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 10px;
+}
+
+.register-form::-webkit-scrollbar-thumb {
+    background: #888;
+    border-radius: 10px;
+}
+
+.register-btn {
+    width: 100%;
+    padding: 15px;
+    background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+    color: white;
+    border: none;
+    border-radius: 10px;
+    font-size: 1.1rem;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    transition: all 0.3s ease;
+}
+
+.register-btn:hover:not(:disabled) {
+    background: linear-gradient(135deg, #38ef7d 0%, #11998e 100%);
+    box-shadow: 0 10px 20px rgba(17, 153, 142, 0.3);
+}
+
+.login-link {
+    color: #11998e;
+    text-decoration: none;
+    font-weight: 600;
+}
+
+@media (max-width: 968px) {
+    .register-container {
+        flex-direction: column;
+    }
+    
+    .register-image-section {
+        flex: 0.4;
+    }
+    
+    .kukang-image {
+        max-height: 60%;
+    }
+    
+    .image-text h1 {
+        font-size: 1.5rem;
+    }
+    
+    .image-text h2 {
+        font-size: 2rem;
+    }
+    
+    .register-form-section {
+        flex: 1;
+    }
+    
+    .register-form {
+        max-height: 80vh;
+        padding: 2rem 1.5rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .register-form {
+        padding: 1.5rem 1rem;
+    }
+    
+    .image-text {
+        bottom: 20px;
+    }
+    
+    .image-text p {
+        display: none;
+    }
+}

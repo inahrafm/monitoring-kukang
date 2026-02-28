@@ -1,0 +1,204 @@
+/* components/Charts/SensorChart.css */
+
+.sensor-chart {
+    background: white;
+    border-radius: 10px;
+    padding: 20px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    transition: transform 0.3s ease;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+.sensor-chart:hover {
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.chart-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+}
+
+.chart-header h4 {
+    color: #333;
+    font-size: 1rem;
+    margin: 0;
+    font-weight: 500;
+}
+
+.chart-controls {
+    display: flex;
+    gap: 5px;
+    background: #f5f5f5;
+    padding: 3px;
+    border-radius: 5px;
+}
+
+.chart-controls button {
+    background: none;
+    border: none;
+    padding: 4px 8px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.8rem;
+    color: #666;
+    transition: all 0.2s ease;
+}
+
+.chart-controls button:hover {
+    background: #e0e0e0;
+}
+
+.chart-controls button.active {
+    background: #4CAF50;
+    color: white;
+}
+
+.chart-loading {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 250px;
+    color: #666;
+    font-size: 0.9rem;
+    background: #fafafa;
+    border-radius: 8px;
+}
+
+/* Recharts customization */
+.recharts-wrapper {
+    margin: 0 auto;
+}
+
+.recharts-cartesian-grid-horizontal line,
+.recharts-cartesian-grid-vertical line {
+    stroke: #e0e0e0;
+    stroke-dasharray: 3 3;
+}
+
+.recharts-xAxis .recharts-cartesian-axis-tick-value,
+.recharts-yAxis .recharts-cartesian-axis-tick-value {
+    font-size: 11px;
+    fill: #666;
+}
+
+.recharts-tooltip-wrapper {
+    background: white;
+    border-radius: 5px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.recharts-default-tooltip {
+    background-color: white !important;
+    border: 1px solid #f0f0f0 !important;
+    border-radius: 5px;
+    padding: 10px !important;
+}
+
+.recharts-tooltip-label {
+    color: #333;
+    font-weight: 500;
+    margin-bottom: 5px;
+}
+
+.recharts-tooltip-item {
+    color: #666 !important;
+    font-size: 0.9rem;
+}
+
+.recharts-legend-wrapper {
+    font-size: 0.8rem;
+    color: #666;
+}
+
+.recharts-legend-item-text {
+    margin-left: 5px;
+}
+
+/* Tooltip custom styling */
+.custom-tooltip {
+    background: white;
+    border: 1px solid #f0f0f0;
+    border-radius: 5px;
+    padding: 10px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.custom-tooltip .time {
+    color: #999;
+    font-size: 0.8rem;
+    margin-bottom: 5px;
+}
+
+.custom-tooltip .value {
+    color: #333;
+    font-size: 1rem;
+    font-weight: 500;
+}
+
+/* Chart type specific */
+.line-chart,
+.area-chart {
+    width: 100%;
+    height: 100%;
+    min-height: 250px;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .sensor-chart {
+        padding: 15px;
+    }
+    
+    .chart-header {
+        flex-direction: column;
+        gap: 10px;
+        align-items: flex-start;
+    }
+    
+    .chart-controls {
+        width: 100%;
+        justify-content: center;
+    }
+    
+    .chart-controls button {
+        flex: 1;
+        text-align: center;
+    }
+    
+    .recharts-xAxis .recharts-cartesian-axis-tick-value {
+        font-size: 9px;
+    }
+}
+
+@media (max-width: 480px) {
+    .sensor-chart {
+        padding: 10px;
+    }
+    
+    .chart-header h4 {
+        font-size: 0.9rem;
+    }
+    
+    .chart-controls button {
+        padding: 3px 6px;
+        font-size: 0.7rem;
+    }
+}
+
+/* Animation for chart updates */
+@keyframes chartUpdate {
+    from {
+        opacity: 0.5;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+.chart-updating {
+    animation: chartUpdate 0.3s ease;
+}

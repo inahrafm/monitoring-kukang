@@ -1,0 +1,50 @@
+.kandang-selector {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: white;
+    padding: 8px 16px;
+    border-radius: 40px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.kandang-selector.empty {
+    background: #f5f5f5;
+    color: #999;
+}
+
+.selector-icon {
+    color: #4CAF50;
+    font-size: 1.2rem;
+}
+
+.kandang-select {
+    border: none;
+    background: none;
+    font-size: 0.95rem;
+    color: #333;
+    font-weight: 500;
+    padding: 5px 10px;
+    cursor: pointer;
+    outline: none;
+    min-width: 200px;
+}
+
+.kandang-select:hover {
+    background: #f5f5f5;
+    border-radius: 20px;
+}
+
+.kandang-stats {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    color: #666;
+    font-size: 0.85rem;
+    border-left: 1px solid #e0e0e0;
+    padding-left: 12px;
+}
+
+.kandang-stats svg {
+    color: #4CAF50;
+}

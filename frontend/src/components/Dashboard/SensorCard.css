@@ -1,0 +1,173 @@
+.sensor-card {
+  background: white;
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
+  border-left: 4px solid #4caf50;
+  position: relative;
+  overflow: hidden;
+}
+
+.sensor-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 8px 15px rgba(0, 0, 0, 0.15);
+}
+
+.sensor-card.low {
+  border-left-color: #ffc107;
+  background: linear-gradient(to right, #fff9e6, white);
+}
+
+.sensor-card.high {
+  border-left-color: #f44336;
+  background: linear-gradient(to right, #ffebee, white);
+}
+
+.sensor-header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 15px;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.sensor-icon {
+  font-size: 24px;
+  color: #666;
+}
+
+.sensor-header h3 {
+  margin: 0;
+  color: #333;
+  font-size: 16px;
+  font-weight: 600;
+  flex: 1;
+}
+
+.kandang-badge {
+  background: #4caf50;
+  color: white;
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+}
+
+.sensor-body {
+  margin-bottom: 15px;
+}
+
+.sensor-value {
+  font-size: 36px;
+  font-weight: bold;
+  color: #333;
+  margin-bottom: 15px;
+  text-align: center;
+}
+
+.sensor-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  margin-bottom: 15px;
+  padding: 10px;
+  background: #f8f9fa;
+  border-radius: 8px;
+}
+
+.stat-item {
+  text-align: center;
+}
+
+.stat-label {
+  display: block;
+  font-size: 11px;
+  color: #666;
+  margin-bottom: 3px;
+}
+
+.stat-value {
+  display: block;
+  font-size: 14px;
+  font-weight: 600;
+  color: #333;
+}
+
+.sensor-time {
+  font-size: 11px;
+  color: #999;
+  text-align: center;
+}
+
+.sensor-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-top: 1px solid #f0f0f0;
+  padding-top: 12px;
+}
+
+.status-badge {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.status-badge.normal {
+  background: #4caf50;
+  color: white;
+}
+
+.status-badge.low {
+  background: #ffc107;
+  color: #333;
+}
+
+.status-badge.high {
+  background: #f44336;
+  color: white;
+}
+
+.sensor-id {
+  font-size: 10px;
+  color: #999;
+  font-family: monospace;
+}
+
+/* Tambahkan atau update bagian ini di file CSS lo */
+.sensor-footer-centered {
+  display: flex;
+  justify-content: center; /* Rata tengah horizontal */
+  align-items: center;
+  padding-top: 15px;
+  border-top: 1px solid #f1f5f9;
+  width: 100%;
+}
+
+.status-badge-main {
+  padding: 6px 16px;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  text-align: center;
+}
+
+.status-badge-main.normal {
+  background: #dcfce7;
+  color: #16a34a;
+}
+.status-badge-main.high {
+  background: #fee2e2;
+  color: #dc2626;
+}
+.status-badge-main.low {
+  background: #fef9c3;
+  color: #ca8a04;
+}

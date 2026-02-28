@@ -1,0 +1,239 @@
+/* components/Alerts/AlertPanel.css */
+
+.alert-panel {
+    background: white;
+    border-radius: 10px;
+    padding: 20px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+.alert-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 20px;
+    padding-bottom: 10px;
+    border-bottom: 2px solid #f0f0f0;
+}
+
+.alert-header h3 {
+    margin: 0;
+    color: #333;
+    font-size: 1.2rem;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.alert-icon {
+    color: #f44336;
+    font-size: 1.4rem;
+}
+
+.alert-count {
+    background: #f44336;
+    color: white;
+    font-size: 0.8rem;
+    padding: 2px 8px;
+    border-radius: 20px;
+    margin-left: 10px;
+}
+
+.no-alerts {
+    text-align: center;
+    padding: 40px 20px;
+    color: #4CAF50;
+    background: #f8f9fa;
+    border-radius: 8px;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+}
+
+.check-icon {
+    font-size: 3rem;
+    color: #4CAF50;
+}
+
+.no-alerts p {
+    font-size: 1.1rem;
+    font-weight: 500;
+    margin: 0;
+}
+
+.no-alerts span {
+    font-size: 0.9rem;
+    color: #666;
+}
+
+.alerts-list {
+    flex: 1;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    max-height: 500px;
+}
+
+.alert-item {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    padding: 15px;
+    border-radius: 8px;
+    background: #fff;
+    border-left: 4px solid;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    transition: transform 0.2s ease;
+}
+
+.alert-item:hover {
+    transform: translateX(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.alert-item.min {
+    border-left-color: #FFC107;
+    background: #fff9e6;
+}
+
+.alert-item.max {
+    border-left-color: #f44336;
+    background: #ffebee;
+}
+
+.alert-content {
+    flex: 1;
+}
+
+.alert-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+    flex-wrap: wrap;
+}
+
+.alert-sensor-icon {
+    font-size: 1.2rem;
+}
+
+.alert-title strong {
+    color: #333;
+    text-transform: capitalize;
+    font-size: 1rem;
+}
+
+.alert-badge {
+    font-size: 0.7rem;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.alert-badge.min {
+    background: #FFC107;
+    color: #333;
+}
+
+.alert-badge.max {
+    background: #f44336;
+    color: white;
+}
+
+.alert-message {
+    color: #555;
+    font-size: 0.9rem;
+    margin-bottom: 8px;
+    line-height: 1.4;
+}
+
+.alert-time {
+    color: #999;
+    font-size: 0.75rem;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.resolve-btn {
+    background: none;
+    border: none;
+    color: #999;
+    cursor: pointer;
+    padding: 5px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+    margin-left: 10px;
+}
+
+.resolve-btn:hover {
+    background: rgba(0, 0, 0, 0.05);
+    color: #f44336;
+}
+
+.alert-loading {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 200px;
+    color: #666;
+    font-size: 0.9rem;
+}
+
+/* Scrollbar styling */
+.alerts-list::-webkit-scrollbar {
+    width: 6px;
+}
+
+.alerts-list::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 10px;
+}
+
+.alerts-list::-webkit-scrollbar-thumb {
+    background: #ccc;
+    border-radius: 10px;
+}
+
+.alerts-list::-webkit-scrollbar-thumb:hover {
+    background: #999;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .alert-panel {
+        padding: 15px;
+    }
+    
+    .alert-title {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 4px;
+    }
+    
+    .alert-item {
+        padding: 12px;
+    }
+}
+
+@media (max-width: 480px) {
+    .alert-header {
+        flex-direction: column;
+        gap: 10px;
+        text-align: center;
+    }
+    
+    .no-alerts {
+        padding: 30px 15px;
+    }
+}
