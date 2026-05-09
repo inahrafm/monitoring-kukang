@@ -21,7 +21,7 @@ const SensorCard = ({ type, data, statistics, kandangId }) => {
   const getTitle = () => {
     const titles = {
       temperature: "Suhu",
-      humidity: "Kelembaban",
+      humidity: "Kelembapan",
       light: "Intensitas Cahaya",
       noise: "Tingkat Kebisingan",
     };
@@ -94,7 +94,7 @@ const SensorCard = ({ type, data, statistics, kandangId }) => {
         )}
       </div>
 
-      <div className="sensor-footer-centered">
+      {false && <div className="sensor-footer-centered">
         <span className={`status-badge-main ${status}`}>
           {status === "normal"
             ? "NORMAL"
@@ -102,7 +102,7 @@ const SensorCard = ({ type, data, statistics, kandangId }) => {
               ? "DI BAWAH NORMAL"
               : "DI ATAS NORMAL"}
         </span>
-      </div>
+      </div>}
     </div>
   );
 };

@@ -18,7 +18,6 @@ const SensorChart = ({ kandangId, sensorType, timeRange }) => {
     try {
       const endTime = new Date();
       const startTime = new Date();
-
       if (timeRange === "7d") startTime.setDate(startTime.getDate() - 7);
       else if (timeRange === "30d") startTime.setDate(startTime.getDate() - 30);
       else startTime.setHours(startTime.getHours() - 24);
@@ -28,39 +27,44 @@ const SensorChart = ({ kandangId, sensorType, timeRange }) => {
         sensorType,
         startTime.toISOString(),
         endTime.toISOString(),
-        timeRange, // Kirim rangeType ke API
+        timeRange,
       );
-
       const raw = Array.isArray(res?.data?.data)
         ? res.data.data
         : Array.isArray(res?.data)
           ? res.data
           : [];
 
-      const formatted = raw.map((item) => {
-        const d = new Date(item.timestamp);
-        // Kompensasi WIB manual (+7 jam)
-        const wib = new Date(
-          d.getTime() + (d.getHours() < 18 ? 7 * 60 * 60 * 1000 : 0),
-        );
+      // URUTKAN BERDASARKAN TIMESTAMP
+      const sorted = [...raw].sort(
+        (a, b) => new Date(a.timestamp) - new Date(b.timestamp),
+      );
+      const formatted = sorted.map((item) => {
+        // Anggap timestamp dari backend adalah UTC
+        const dUtc = new Date(item.timestamp);
+
+        // Tambah 7 jam untuk WIB
+        const d = new Date(dUtc.getTime() + 7 * 60 * 60 * 1000);
 
         let lbl = "";
-        // Tampilkan Tanggal jika rentang lama, tampilkan Jam jika harian
         if (timeRange === "7d" || timeRange === "30d") {
-          lbl = wib.toLocaleDateString("id-ID", {
+          lbl = d.toLocaleDateString("id-ID", {
             day: "numeric",
             month: "short",
           });
         } else {
-          lbl = wib.toLocaleTimeString("id-ID", {
-            hour: "2-digit",
-            minute: "2-digit",
-            hour12: false,
-          });
+          lbl = d
+            .toLocaleTimeString("id-ID", {
+              hour: "2-digit",
+              minute: "2-digit",
+              hour12: false,
+            })
+            .replace(/:/g, ".");
         }
 
         return { ...item, value: parseFloat(item.value), label: lbl };
       });
+
       setData(formatted);
     } catch (e) {
       console.error("Chart Error:", e);
@@ -82,7 +86,7 @@ const SensorChart = ({ kandangId, sensorType, timeRange }) => {
         <XAxis
           dataKey="label"
           tick={{ fontSize: 10 }}
-          minTickGap={timeRange === "24h" ? 30 : 5}
+          minTickGap={timeRange === "24h" ? 35 : 10}
         />
         <YAxis tick={{ fontSize: 10 }} domain={["auto", "auto"]} />
         <Tooltip labelFormatter={(v) => `Waktu/Tanggal: ${v}`} />
@@ -92,7 +96,6 @@ const SensorChart = ({ kandangId, sensorType, timeRange }) => {
           stroke="#4f46e5"
           fill="#4f46e5"
           fillOpacity={0.1}
-          animationDuration={500}
         />
       </AreaChart>
     </ResponsiveContainer>
