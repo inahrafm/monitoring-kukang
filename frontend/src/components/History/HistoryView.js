@@ -63,7 +63,7 @@ const HistoryView = () => {
     loadPreview();
   }, [selectedKand, selectedSens, startD, endD]);
 
-  // Fungsi untuk mengunduh laporan CSV dengan waktu WIB
+  // Fungsi untuk mengunduh laporan CSV format ethogram
   const download = async () => {
     try {
       const queryStart = new Date(startD);
@@ -71,45 +71,98 @@ const HistoryView = () => {
       const queryEnd = new Date(endD);
       queryEnd.setHours(23, 59, 59, 999);
 
-      const res = await getKandangHistorical(
-        selectedKand,
-        selectedSens,
-        queryStart.toISOString(),
-        queryEnd.toISOString(),
+      const SENSORS = ["temperature", "humidity", "light", "noise"];
+
+      // Fetch semua 4 sensor sekaligus
+      const results = await Promise.all(
+        SENSORS.map((s) =>
+          getKandangHistorical(
+            selectedKand,
+            s,
+            queryStart.toISOString(),
+            queryEnd.toISOString(),
+          ),
+        ),
       );
 
-      const d = Array.isArray(res?.data?.data)
-        ? res.data.data
-        : Array.isArray(res?.data)
-          ? res.data
-          : [];
+      // Bangun map: "HH:MM" -> { temperature, humidity, light, noise }
+      // Pakai slot 5 menit: ambil nilai terdekat dalam window 5 menit
+      const sensorMap = {}; // key: "HH:MM" (WIB, dibulatkan ke 5 menit)
 
-      // Header CSV
-      let csvContent = "Waktu,Kandang,Sensor,Nilai,Satuan\n";
+      results.forEach((res, idx) => {
+        const sensorKey = SENSORS[idx];
+        const d = Array.isArray(res?.data?.data)
+          ? res.data.data
+          : Array.isArray(res?.data)
+            ? res.data
+            : [];
 
-      // Isi baris CSV dengan format waktu WIB
-      d.forEach((r) => {
-        const dUtc = new Date(r.timestamp);
-        const dWib = new Date(dUtc.getTime() + 7 * 60 * 60 * 1000);
+        d.forEach((r) => {
+          const dUtc = new Date(r.timestamp);
+          const dWib = new Date(dUtc.getTime() + 7 * 60 * 60 * 1000);
 
-        const waktuWIB = dWib
-          .toLocaleString("id-ID", {
-            dateStyle: "medium",
-            timeStyle: "medium",
-          })
-          .replace(/,/g, ""); // Hapus koma agar kolom CSV tidak berantakan
+          // Bulatkan ke slot 5 menit terdekat
+          const minutes = dWib.getMinutes();
+          const roundedMin = Math.floor(minutes / 5) * 5;
+          const slotHour = String(dWib.getHours()).padStart(2, "0");
+          const slotMin = String(roundedMin).padStart(2, "0");
+          const slotKey = `${slotHour}:${slotMin}`;
 
-        csvContent += `${waktuWIB},${r.kandang_id},${r.sensor_type},${r.value},${r.unit}\n`;
+          if (!sensorMap[slotKey]) sensorMap[slotKey] = {};
+          // Simpan nilai pertama yang ditemukan per slot (bisa diganti avg jika perlu)
+          if (sensorMap[slotKey][sensorKey] === undefined) {
+            sensorMap[slotKey][sensorKey] = parseFloat(r.value).toFixed(2);
+          }
+        });
+      });
+
+      // Sesi waktu hardcoded sesuai template
+      const SESSIONS = [
+        { label: "Waktu bangun (18:00–20:00)", startHour: 18, endHour: 20 },
+        { label: "Waktu aktif (00:00–02:00)", startHour: 0, endHour: 2 },
+        {
+          label: "Waktu sebelum tidur (04:00–06:00)",
+          startHour: 4,
+          endHour: 6,
+        },
+      ];
+
+      const HEADER_ROW = `Waktu,Catatan,${SENSORS.join(",")}`;
+
+      // Generate semua slot 5 menit untuk range jam tertentu
+      const generateSlots = (startHour, endHour) => {
+        const slots = [];
+        for (let h = startHour; h <= endHour; h++) {
+          const maxMin = h === endHour ? 0 : 55;
+          for (let m = 0; m <= maxMin; m += 5) {
+            const hh = String(h).padStart(2, "0");
+            const mm = String(m).padStart(2, "0");
+            slots.push(`${hh}:${mm}`);
+          }
+        }
+        return slots;
+      };
+
+      let csvContent = "";
+
+      SESSIONS.forEach((session, idx) => {
+        if (idx > 0) csvContent += "\n"; // baris kosong antar sesi
+        csvContent += `${session.label}\n`;
+        csvContent += `${HEADER_ROW}\n`;
+
+        const slots = generateSlots(session.startHour, session.endHour);
+        slots.forEach((slot) => {
+          const row = sensorMap[slot] || {};
+          const values = SENSORS.map((s) => row[s] ?? "").join(",");
+          csvContent += `${slot},,${values}\n`;
+        });
       });
 
       const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.setAttribute("href", url);
-      link.setAttribute(
-        "download",
-        `Laporan_Kukang_${selectedKand}_${selectedSens}.csv`,
-      );
+      link.setAttribute("download", `Laporan_Kukang_${selectedKand}.csv`);
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
