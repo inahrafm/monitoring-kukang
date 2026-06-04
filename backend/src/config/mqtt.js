@@ -26,11 +26,11 @@ class MQTTConfig {
       this.connected = true;
 
       // GUNAKAN WILDCARD PALING BASIC DULU
-      const testTopic = "#";
+      const kukangTopic = "+/kukang/#";
 
-      this.client.subscribe(testTopic, (err) => {
+      this.client.subscribe(kukangTopic, (err) => {
         if (!err) {
-          console.log(`📡 BERHASIL SUBSCRIBE KE SEMUA TOPIK (#)`);
+          console.log(`📡 BERHASIL SUBSCRIBE KE TOPIK: +/kukang/#`);
         } else {
           console.error(`❌ GAGAL SUBSCRIBE:`, err.message);
         }

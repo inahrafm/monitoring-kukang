@@ -7,7 +7,7 @@ class MQTTService {
     this.unitMap = {
       temperature: "°C",
       humidity: "%",
-      light: "Lumen",
+      light: "Lux",
       noise: "dB",
     };
     this.activeKandang = new Map();
@@ -36,7 +36,7 @@ class MQTTService {
         kandang_id: kandangId,
         sensor_id: `sensor_${kandangId}_${sensorType}`,
         sensor_type: sensorType,
-        value: parseFloat(data.value || data),
+        value: (() => { const rawValue = parseFloat(data.value !== undefined ? data.value : data); return sensorType === "noise" ? rawValue / 2 : rawValue; })(),
         unit: this.unitMap[sensorType] || "unit",
         timestamp: new Date().toISOString(),
       };
