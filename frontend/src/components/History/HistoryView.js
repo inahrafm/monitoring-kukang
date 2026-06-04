@@ -39,26 +39,48 @@ const HistoryView = () => {
       try {
         const queryStart = new Date(startD);
         queryStart.setHours(0, 0, 0, 0);
-
         const queryEnd = new Date(endD);
         queryEnd.setHours(23, 59, 59, 999);
 
-        const res = await getKandangHistorical(
-          selectedKand,
-          "temperature",
-          queryStart.toISOString(),
-          queryEnd.toISOString(),
+        const SENSORS = ["temperature", "humidity", "light", "noise"];
+        const results = await Promise.all(
+          SENSORS.map((s) =>
+            getKandangHistorical(
+              selectedKand,
+              s,
+              queryStart.toISOString(),
+              queryEnd.toISOString(),
+            ),
+          ),
         );
 
-        const d = Array.isArray(res?.data?.data)
-          ? res.data.data
-          : Array.isArray(res?.data)
-            ? res.data
-            : [];
-        const sortedDesc = [...d].sort(
-          (a, b) => new Date(b.timestamp) - new Date(a.timestamp),
-        );
-        setPreviewData(sortedDesc.slice(0, 10));
+        // Merge semua sensor ke sensorMap per slot 5 menit
+        const sensorMap = {};
+        results.forEach((res, idx) => {
+          const sensorKey = SENSORS[idx];
+          const d = Array.isArray(res?.data?.data)
+            ? res.data.data
+            : Array.isArray(res?.data)
+              ? res.data
+              : [];
+          d.forEach((r) => {
+            const dWib = new Date(
+              new Date(r.timestamp).getTime() + 7 * 60 * 60 * 1000,
+            );
+            const roundedMin = Math.floor(dWib.getMinutes() / 5) * 5;
+            const slotKey = `${String(dWib.getHours()).padStart(2, "0")}:${String(roundedMin).padStart(2, "0")}`;
+            if (!sensorMap[slotKey]) sensorMap[slotKey] = { slot: slotKey };
+            if (sensorMap[slotKey][sensorKey] === undefined) {
+              sensorMap[slotKey][sensorKey] = parseFloat(r.value).toFixed(2);
+            }
+          });
+        });
+
+        // Ambil 10 slot terbaru
+        const sorted = Object.values(sensorMap)
+          .sort((a, b) => b.slot.localeCompare(a.slot))
+          .slice(0, 10);
+        setPreviewData(sorted);
       } catch (e) {
         console.error("Gagal memuat pratinjau:", e);
       } finally {
@@ -150,10 +172,18 @@ const HistoryView = () => {
       aoa.push(metaRow);
       aoa.push(Array(TOTAL_COLS).fill(""));
 
+      const merges = [{ s: { r: 0, c: 0 }, e: { r: 0, c: TOTAL_COLS - 1 } }]; // judul
+
       SESSIONS.forEach((session, idx) => {
+        const sessionRowIdx = aoa.length;
         const sessionRow = Array(TOTAL_COLS).fill("");
         sessionRow[0] = session.label;
         aoa.push(sessionRow);
+        merges.push({
+          s: { r: sessionRowIdx, c: 0 },
+          e: { r: sessionRowIdx, c: TOTAL_COLS - 1 },
+        });
+
         aoa.push(["Waktu", "Catatan", ...SENSORS]);
         generateSlots(session.startHour, session.endHour).forEach((slot) => {
           const row = sensorMap[slot] || {};
@@ -180,8 +210,12 @@ const HistoryView = () => {
         { wch: 12 },
       ];
 
+      ws["!merges"] = merges;
+
       XLSX.utils.book_append_sheet(wb, ws, "Laporan Sensor");
-      XLSX.writeFile(wb, `Laporan_Kukang_${selectedKand}.xlsx`);
+      const fmt = (d) => d.toLocaleDateString("id-ID").replace(/\//g, "-");
+      const filename = `Laporan_Kukang_${selectedKand}_${fmt(startD)}_${fmt(endD)}.xlsx`;
+      XLSX.writeFile(wb, filename);
     } catch (error) {
       console.error("Gagal mengunduh laporan:", error);
       alert("Gagal mengunduh laporan. Silakan coba lagi.");
@@ -231,7 +265,7 @@ const HistoryView = () => {
             />
           </div>
           <button onClick={download} className="btn-download-full">
-            <FiDownload /> Unduh Laporan CSV
+            <FiDownload /> Unduh Data
           </button>
         </div>
 
@@ -245,37 +279,27 @@ const HistoryView = () => {
                 <thead>
                   <tr>
                     <th>Jam (WIB)</th>
-                    <th>Nilai</th>
-                    <th>Satuan</th>
+                    <th>Suhu (°C)</th>
+                    <th>Kelembapan (%)</th>
+                    <th>Cahaya (Lux)</th>
+                    <th>Suara (dB)</th>
                   </tr>
                 </thead>
                 <tbody>
                   {previewData.length > 0 ? (
                     previewData.map((r, i) => (
                       <tr key={i}>
-                        <td>
-                          {(() => {
-                            const dUtc = new Date(r.timestamp);
-                            const dWib = new Date(
-                              dUtc.getTime() + 7 * 60 * 60 * 1000,
-                            );
-                            return dWib.toLocaleTimeString("id-ID", {
-                              hour: "2-digit",
-                              minute: "2-digit",
-                              hour12: false,
-                            });
-                          })()}
-                        </td>
-                        <td>
-                          <strong>{parseFloat(r.value).toFixed(2)}</strong>
-                        </td>
-                        <td>{r.unit}</td>
+                        <td>{r.slot}</td>
+                        <td>{r.temperature ?? "-"}</td>
+                        <td>{r.humidity ?? "-"}</td>
+                        <td>{r.light ?? "-"}</td>
+                        <td>{r.noise ?? "-"}</td>
                       </tr>
                     ))
                   ) : (
                     <tr>
                       <td
-                        colSpan="3"
+                        colSpan="5"
                         style={{
                           textAlign: "center",
                           padding: "40px",
