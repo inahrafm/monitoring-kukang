@@ -15,7 +15,6 @@ import "./HistoryView.css";
 const HistoryView = () => {
   const { kandangList, selectedKandang: ctxKandang } = useKandang();
   const [selectedKand, setSelectedKand] = useState(ctxKandang || "");
-  const [selectedSens, setSelectedSens] = useState("temperature");
   const [startD, setStartD] = useState(
     new Date(new Date().setHours(0, 0, 0, 0)),
   );
@@ -37,7 +36,7 @@ const HistoryView = () => {
 
         const res = await getKandangHistorical(
           selectedKand,
-          selectedSens,
+          "temperature",
           queryStart.toISOString(),
           queryEnd.toISOString(),
         );
@@ -47,12 +46,9 @@ const HistoryView = () => {
           : Array.isArray(res?.data)
             ? res.data
             : [];
-        // setPreviewData(d.slice(0, 10)); // Ambil 10 data teratas untuk pratinjau
         const sortedDesc = [...d].sort(
           (a, b) => new Date(b.timestamp) - new Date(a.timestamp),
         );
-
-        // Ambil 10 data TERBARU
         setPreviewData(sortedDesc.slice(0, 10));
       } catch (e) {
         console.error("Gagal memuat pratinjau:", e);
@@ -61,7 +57,7 @@ const HistoryView = () => {
       }
     };
     loadPreview();
-  }, [selectedKand, selectedSens, startD, endD]);
+  }, [selectedKand, startD, endD]);
 
   // Fungsi untuk mengunduh laporan CSV format ethogram
   const download = async () => {
@@ -167,6 +163,7 @@ const HistoryView = () => {
       link.click();
       document.body.removeChild(link);
     } catch (error) {
+      console.error("Gagal mengunduh laporan:", error);
       alert("Gagal mengunduh laporan. Silakan coba lagi.");
     }
   };
@@ -195,18 +192,6 @@ const HistoryView = () => {
                   {k.kandang_id}
                 </option>
               ))}
-            </select>
-          </div>
-          <div className="input-group">
-            <label>Jenis Sensor</label>
-            <select
-              value={selectedSens}
-              onChange={(e) => setSelectedSens(e.target.value)}
-            >
-              <option value="temperature">Suhu (°C)</option>
-              <option value="humidity">Kelembapan (%)</option>
-              <option value="light">Cahaya (Lux)</option>
-              <option value="noise">Suara (dB)</option>
             </select>
           </div>
           <div className="input-group">
