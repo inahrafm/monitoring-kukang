@@ -15,6 +15,14 @@ import "./HistoryView.css";
 const HistoryView = () => {
   const { kandangList, selectedKandang: ctxKandang } = useKandang();
   const [selectedKand, setSelectedKand] = useState(ctxKandang || "");
+
+  // Pastikan selectedKand terisi saat kandangList load
+  useEffect(() => {
+    if (!selectedKand && kandangList?.length > 0) {
+      setSelectedKand(ctxKandang || kandangList[0].kandang_id);
+    }
+  }, [kandangList, ctxKandang]);
+
   const [startD, setStartD] = useState(
     new Date(new Date().setHours(0, 0, 0, 0)),
   );
