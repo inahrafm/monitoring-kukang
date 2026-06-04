@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
+import * as XLSX from "xlsx";
 import { useKandang } from "../../context/KandangContext";
 import { getKandangHistorical } from "../../services/api";
 import {
@@ -67,7 +68,7 @@ const HistoryView = () => {
     loadPreview();
   }, [selectedKand, startD, endD]);
 
-  // Fungsi untuk mengunduh laporan CSV format ethogram
+  // Fungsi untuk mengunduh laporan Excel format ethogram
   const download = async () => {
     try {
       const queryStart = new Date(startD);
@@ -77,7 +78,6 @@ const HistoryView = () => {
 
       const SENSORS = ["temperature", "humidity", "light", "noise"];
 
-      // Fetch semua 4 sensor sekaligus
       const results = await Promise.all(
         SENSORS.map((s) =>
           getKandangHistorical(
@@ -89,10 +89,7 @@ const HistoryView = () => {
         ),
       );
 
-      // Bangun map: "HH:MM" -> { temperature, humidity, light, noise }
-      // Pakai slot 5 menit: ambil nilai terdekat dalam window 5 menit
-      const sensorMap = {}; // key: "HH:MM" (WIB, dibulatkan ke 5 menit)
-
+      const sensorMap = {};
       results.forEach((res, idx) => {
         const sensorKey = SENSORS[idx];
         const d = Array.isArray(res?.data?.data)
@@ -100,27 +97,18 @@ const HistoryView = () => {
           : Array.isArray(res?.data)
             ? res.data
             : [];
-
         d.forEach((r) => {
           const dUtc = new Date(r.timestamp);
           const dWib = new Date(dUtc.getTime() + 7 * 60 * 60 * 1000);
-
-          // Bulatkan ke slot 5 menit terdekat
-          const minutes = dWib.getMinutes();
-          const roundedMin = Math.floor(minutes / 5) * 5;
-          const slotHour = String(dWib.getHours()).padStart(2, "0");
-          const slotMin = String(roundedMin).padStart(2, "0");
-          const slotKey = `${slotHour}:${slotMin}`;
-
+          const roundedMin = Math.floor(dWib.getMinutes() / 5) * 5;
+          const slotKey = `${String(dWib.getHours()).padStart(2, "0")}:${String(roundedMin).padStart(2, "0")}`;
           if (!sensorMap[slotKey]) sensorMap[slotKey] = {};
-          // Simpan nilai pertama yang ditemukan per slot (bisa diganti avg jika perlu)
           if (sensorMap[slotKey][sensorKey] === undefined) {
             sensorMap[slotKey][sensorKey] = parseFloat(r.value).toFixed(2);
           }
         });
       });
 
-      // Sesi waktu hardcoded sesuai template
       const SESSIONS = [
         { label: "Waktu bangun (18:00–20:00)", startHour: 18, endHour: 20 },
         { label: "Waktu aktif (00:00–02:00)", startHour: 0, endHour: 2 },
@@ -131,45 +119,69 @@ const HistoryView = () => {
         },
       ];
 
-      const HEADER_ROW = `Waktu,Catatan,${SENSORS.join(",")}`;
-
-      // Generate semua slot 5 menit untuk range jam tertentu
       const generateSlots = (startHour, endHour) => {
         const slots = [];
         for (let h = startHour; h <= endHour; h++) {
           const maxMin = h === endHour ? 0 : 55;
           for (let m = 0; m <= maxMin; m += 5) {
-            const hh = String(h).padStart(2, "0");
-            const mm = String(m).padStart(2, "0");
-            slots.push(`${hh}:${mm}`);
+            slots.push(
+              `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`,
+            );
           }
         }
         return slots;
       };
 
-      let csvContent = "";
+      const TOTAL_COLS = 2 + SENSORS.length;
+      const aoa = [];
+
+      // Judul
+      const titleRow = Array(TOTAL_COLS).fill("");
+      titleRow[0] = "Pengamatan Perilaku Kukang Jawa";
+      aoa.push(titleRow);
+      aoa.push(Array(TOTAL_COLS).fill(""));
+
+      // Metadata
+      const metaRow = Array(TOTAL_COLS).fill("");
+      metaRow[0] = "Kandang";
+      metaRow[1] = selectedKand;
+      metaRow[2] = "Tanggal :";
+      metaRow[3] = `${startD.toLocaleDateString("id-ID")} – ${endD.toLocaleDateString("id-ID")}`;
+      aoa.push(metaRow);
+      aoa.push(Array(TOTAL_COLS).fill(""));
 
       SESSIONS.forEach((session, idx) => {
-        if (idx > 0) csvContent += "\n"; // baris kosong antar sesi
-        csvContent += `${session.label}\n`;
-        csvContent += `${HEADER_ROW}\n`;
-
-        const slots = generateSlots(session.startHour, session.endHour);
-        slots.forEach((slot) => {
+        const sessionRow = Array(TOTAL_COLS).fill("");
+        sessionRow[0] = session.label;
+        aoa.push(sessionRow);
+        aoa.push(["Waktu", "Catatan", ...SENSORS]);
+        generateSlots(session.startHour, session.endHour).forEach((slot) => {
           const row = sensorMap[slot] || {};
-          const values = SENSORS.map((s) => row[s] ?? "").join(",");
-          csvContent += `${slot},,${values}\n`;
+          aoa.push([
+            slot,
+            "",
+            ...SENSORS.map((s) => (row[s] !== undefined ? Number(row[s]) : "")),
+          ]);
         });
+        if (idx < SESSIONS.length - 1) {
+          aoa.push(Array(TOTAL_COLS).fill(""));
+        }
       });
 
-      const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
-      const url = window.URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.setAttribute("href", url);
-      link.setAttribute("download", `Laporan_Kukang_${selectedKand}.csv`);
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
+      const wb = XLSX.utils.book_new();
+      const ws = XLSX.utils.aoa_to_sheet(aoa);
+
+      ws["!cols"] = [
+        { wch: 10 },
+        { wch: 25 },
+        { wch: 14 },
+        { wch: 12 },
+        { wch: 12 },
+        { wch: 12 },
+      ];
+
+      XLSX.utils.book_append_sheet(wb, ws, "Laporan Sensor");
+      XLSX.writeFile(wb, `Laporan_Kukang_${selectedKand}.xlsx`);
     } catch (error) {
       console.error("Gagal mengunduh laporan:", error);
       alert("Gagal mengunduh laporan. Silakan coba lagi.");
