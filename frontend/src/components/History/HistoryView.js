@@ -397,7 +397,7 @@ const HistoryView = () => {
                 dateFormat="dd/MM/yyyy"
               />
             </div>
-            <button onClick={downloadCSV} className="btn-download-csv">
+            <button onClick={downloadCSV} className="btn-download-full">
               <FiDownload /> Unduh Data CSV
             </button>
           </div>
