@@ -10,9 +10,18 @@ const AlertService = require("./services/alertService");
 
 const app = express();
 
+// CORS_ORIGINS di .env: daftar origin dipisah koma
+const corsOrigins = (
+  process.env.CORS_ORIGINS ||
+  "http://localhost:3000,http://38.47.176.109"
+)
+  .split(",")
+  .map((o) => o.trim())
+  .filter(Boolean);
+
 app.use(
   cors({
-    origin: ["http://localhost:3000", "http://38.47.176.109"],
+    origin: corsOrigins,
     credentials: true,
   }),
 );

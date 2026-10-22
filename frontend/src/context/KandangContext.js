@@ -1,15 +1,22 @@
 import React, { createContext, useState, useContext, useEffect } from "react";
 import { getKandangSummary } from "../services/api";
+import { useAuth } from "./AuthContext";
 
 const KandangContext = createContext();
 export const useKandang = () => useContext(KandangContext);
 
 export const KandangProvider = ({ children }) => {
+  const { token } = useAuth();
   const [kandangList, setKandangList] = useState([]);
   const [selectedKandang, setSelectedKandang] = useState(null);
   const [loading, setLoading] = useState(true);
 
   const loadKandangList = async () => {
+    // Belum login: jangan polling endpoint yang butuh token
+    if (!token) {
+      setLoading(false);
+      return;
+    }
     try {
       const response = await getKandangSummary();
       const list = Array.isArray(response)
@@ -32,7 +39,7 @@ export const KandangProvider = ({ children }) => {
     loadKandangList();
     const interval = setInterval(loadKandangList, 15000);
     return () => clearInterval(interval);
-  }, [selectedKandang]); // Pantau selectedKandang agar tidak tertimpa
+  }, [selectedKandang, token]); // Pantau selectedKandang agar tidak tertimpa
 
   return (
     <KandangContext.Provider
