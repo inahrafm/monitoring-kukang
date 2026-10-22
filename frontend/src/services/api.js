@@ -1,7 +1,10 @@
 import axios from "axios";
 
+// Tanpa REACT_APP_API_URL, pakai host yang sama dengan halaman (port 5000),
+// supaya browser tidak memanggil localhost milik laptop user.
 const API_BASE_URL =
-  process.env.REACT_APP_API_URL || "http://localhost:5000/api";
+  process.env.REACT_APP_API_URL ||
+  `${window.location.protocol}//${window.location.hostname}:5000/api`;
 
 const api = axios.create({
   baseURL: API_BASE_URL,
