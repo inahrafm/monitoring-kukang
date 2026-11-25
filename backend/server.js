@@ -13,24 +13,27 @@ const server = app.listen(PORT, '0.0.0.0', () => {
     initializeServices();
 });
 
-// Graceful shutdown
-process.on('SIGTERM', () => {
-    console.log('📥 SIGTERM signal received: closing HTTP server');
-    server.close(() => {
+// Graceful shutdown: tutup HTTP server dan koneksi MQTT
+const MQTTConfig = require('./src/config/mqtt');
+let shuttingDown = false;
+const shutdown = (signal) => {
+    if (shuttingDown) return;
+    shuttingDown = true;
+    console.log(`📥 ${signal} signal received: closing HTTP server`);
+    // Paksa keluar bila penutupan menggantung
+    setTimeout(() => process.exit(1), 10000).unref();
+    server.close(async () => {
         console.log('✅ HTTP server closed');
-        // Close MQTT connection
-        const MQTTConfig = require('./src/config/mqtt');
-        MQTTConfig.disconnect();
+        try {
+            await MQTTConfig.disconnect();
+        } catch (err) {
+            console.error('❌ Gagal menutup MQTT:', err.message);
+        }
         process.exit(0);
     });
-});
+};
 
-process.on('SIGINT', () => {
-    console.log('📥 SIGINT signal received: closing HTTP server');
-    server.close(() => {
-        console.log('✅ HTTP server closed');
-        process.exit(0);
-    });
-});
+process.on('SIGTERM', () => shutdown('SIGTERM'));
+process.on('SIGINT', () => shutdown('SIGINT'));
 
 module.exports = server;

@@ -12,9 +12,9 @@ class AlertService {
           (t) => t.sensor_type === reading.sensor_type,
         );
         if (threshold) {
-          if (threshold.min_value && reading.value < threshold.min_value)
+          if (threshold.min_value != null && reading.value < threshold.min_value)
             await this.createAlert(reading, "min", threshold.min_value);
-          if (threshold.max_value && reading.value > threshold.max_value)
+          if (threshold.max_value != null && reading.value > threshold.max_value)
             await this.createAlert(reading, "max", threshold.max_value);
         }
       }
@@ -24,6 +24,19 @@ class AlertService {
   }
 
   static async createAlert(reading, type, thresholdValue) {
+    // Jangan catat alert yang sama berulang kali: lewati bila alert dengan
+    // kandang, sensor dan jenis yang sama sudah tercatat dalam masa cooldown.
+    const cooldownMinutes = parseInt(process.env.ALERT_COOLDOWN_MINUTES, 10) || 30;
+    const existing = await db.query(
+      `SELECT 1 FROM alerts
+       WHERE kandang_id = $1 AND sensor_type = $2 AND alert_type = $3
+         AND is_resolved = false
+         AND created_at > NOW() - ($4 || ' minutes')::interval
+       LIMIT 1`,
+      [reading.kandang_id, reading.sensor_type, type, String(cooldownMinutes)],
+    );
+    if (existing.rows.length > 0) return;
+
     const query = `INSERT INTO alerts (sensor_id, sensor_type, alert_type, value, threshold_value, message, kandang_id)
                        VALUES ($1, $2, $3, $4, $5, $6, $7)`;
     const message = `${reading.sensor_type} (${reading.value}) ${type === "min" ? "rendah" : "tinggi"} (Batas: ${thresholdValue})`;
