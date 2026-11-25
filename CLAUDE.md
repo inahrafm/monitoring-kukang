@@ -20,7 +20,8 @@ alat ──MQTT──► broker 103.197.189.18:1883 ──► backend (Express, 
 ```
 
 - **Topik MQTT**: `{kandangId}/kukang/{sensor}`, mis. `kandang-1/kukang/temperature`.
-  Sensor: `temperature`, `humidity`, `light`, `noise`. Payload: angka (`25.3`) atau
+  Sensor: `temperature`, `humidity`, `light`, `noise`, `voltage` (V), `current` (mA), `power` (mW;
+  3 terakhir disimpan tapi tidak ditampilkan/diunduh). Payload: angka (`25.3`) atau
   JSON `{"value": 25.3, "timestamp": ...}` (timestamp opsional; detik/ms/ISO; kalau tidak valid
   dipakai jam server). Backend subscribe `+/kukang/#` QoS 1, clientId tetap (`MQTT_CLIENT_ID`,
   default `kukang_backend`), `clean: false`.
@@ -86,9 +87,9 @@ Log backend yang sehat: `✅ MQTT Broker connected (mqtt://103.197.189.18:1883)`
       port 80 / 3055 (Docker, melewati ufw) / 3004, cek `ufw status numbered` & `/var/log/ufw.log`.
       Opsi bila port diblokir di luar: proxy lewat nginx (80/443) yang sudah terbuka.
 - [x] Data alat tersimpan: `ROOM-01` (topic `ROOM-01/kukang/*`, client `ESP32_Kukang`, QoS 0, tiap ~5 menit).
-- [ ] **Perbaikan audit web/backend (PR #4 merged, belum di-deploy)** — urutan deploy WAJIB:
-  backup DB → jalankan `backend/migrations/2026-11-25-timestamptz-dan-sensor-daya.sql` → restart
-  `kukang-backend` → build frontend. (Kode baru + skema lama, atau sebaliknya = jam bergeser 7 jam.)
+- [x] **Perbaikan audit web/backend (PR #4 & #5, deployed 2026-11-25)** — migrasi
+  `backend/migrations/2026-11-25-timestamptz-dan-sensor-daya.sql` sudah dijalankan (kolom waktu
+  `sensor_readings` & `alerts` = `timestamptz`; backup `~/kandang_kukang_pra_migrasi.dump` di server).
   Isi perbaikan: 7 sensor (`voltage` V, `current` mA, `power` mW) diterima & disimpan backend;
   **keputusan user: data kelistrikan tidak ditampilkan & tidak ikut diunduh** (dokter hewan tidak
   perlu) — frontend hanya suhu, kelembapan, cahaya, suara (`SENSORS` di `utils/sensors.js`); kolom waktu `timestamptz` (data lama: `timestamp` = UTC, `created_at`/alerts = WIB,
@@ -130,3 +131,6 @@ Log backend yang sehat: `✅ MQTT Broker connected (mqtt://103.197.189.18:1883)`
   tanpa scroll horizontal (desktop & HP).
 - **2026-11-25** — PR #4 merged. Keputusan user: tegangan/arus/daya disembunyikan dari dashboard,
   pratinjau, CSV & Excel (tetap disimpan di DB).
+- **2026-11-25** — Deploy PR #4 & #5: migrasi DB jalan, backend restart, frontend build. Terverifikasi:
+  7 sensor tersimpan, `max(timestamp)` = jam WIB sekarang (+07), tab History jam asli (18:10 = 18:10:07).
+  Catatan alat: arus ~0,02 mA & daya 0 mW (tegangan 4,15 V) → cek sensor daya di sisi firmware.
