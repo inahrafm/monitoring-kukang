@@ -13,9 +13,8 @@ const AlertPanel = ({ kandangId }) => {
   const fetchAlerts = useCallback(async () => {
     try {
       const response = await getActiveAlerts();
-      // Proteksi: Pastikan kita ambil data array dari dalam object response
-      // Backend kita kirim { success: true, data: [] }
-      const incomingData = response?.data || [];
+      // axios: response.data = body dari backend = { success, data: [...] }
+      const incomingData = response?.data?.data || [];
 
       if (Array.isArray(incomingData)) {
         let filtered = incomingData;

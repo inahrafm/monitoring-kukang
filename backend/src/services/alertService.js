@@ -24,14 +24,15 @@ class AlertService {
   }
 
   static async createAlert(reading, type, thresholdValue) {
-    // Jangan catat alert yang sama berulang kali: lewati bila alert dengan
-    // kandang, sensor dan jenis yang sama sudah tercatat dalam masa cooldown.
+    // Jangan catat alert yang sama berulang kali. Lewati bila untuk kandang,
+    // sensor dan jenis yang sama: masih ada alert yang belum di-resolve, atau
+    // ada alert (termasuk yang sudah di-resolve) dalam masa cooldown.
     const cooldownMinutes = parseInt(process.env.ALERT_COOLDOWN_MINUTES, 10) || 30;
     const existing = await db.query(
       `SELECT 1 FROM alerts
        WHERE kandang_id = $1 AND sensor_type = $2 AND alert_type = $3
-         AND is_resolved = false
-         AND created_at > NOW() - ($4 || ' minutes')::interval
+         AND (is_resolved = false
+              OR created_at > NOW() - ($4 || ' minutes')::interval)
        LIMIT 1`,
       [reading.kandang_id, reading.sensor_type, type, String(cooldownMinutes)],
     );
@@ -51,11 +52,26 @@ class AlertService {
     ]);
   }
 
-  static async getActiveAlerts() {
-    const result = await db.query(
-      `SELECT * FROM alerts WHERE is_resolved = false ORDER BY created_at DESC`,
-    );
+  static async getActiveAlerts({ kandangId, limit } = {}) {
+    const values = [];
+    let query = `SELECT * FROM alerts WHERE is_resolved = false`;
+    if (kandangId) {
+      values.push(kandangId);
+      query += ` AND kandang_id = $${values.length}`;
+    }
+    const max = Math.min(Math.max(parseInt(limit, 10) || 100, 1), 500);
+    values.push(max);
+    query += ` ORDER BY created_at DESC LIMIT $${values.length}`;
+    const result = await db.query(query, values);
     return result.rows;
+  }
+
+  static async resolveAlert(alertId) {
+    const result = await db.query(
+      `UPDATE alerts SET is_resolved = true WHERE id = $1 RETURNING *`,
+      [alertId],
+    );
+    return result.rows[0] || null;
   }
 }
 module.exports = AlertService;

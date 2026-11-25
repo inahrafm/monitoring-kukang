@@ -1,4 +1,5 @@
 const SensorModel = require("../models/SensorModel");
+const AlertService = require("../services/alertService");
 
 class SensorController {
   static async getLatestReadings(req, res) {
@@ -87,16 +88,32 @@ class SensorController {
 
   static async getActiveAlerts(req, res) {
     try {
-      res.json({ success: true, data: [] });
+      const { kandangId, limit } = req.query;
+      const alerts = await AlertService.getActiveAlerts({ kandangId, limit });
+      res.json({ success: true, data: alerts, total: alerts.length });
     } catch (error) {
+      console.error("❌ getActiveAlerts:", error.message);
       res.status(500).json({ success: false, error: error.message });
     }
   }
 
   static async resolveAlert(req, res) {
     try {
-      res.json({ success: true, message: "Alert resolved" });
+      const alertId = Number(req.params.alertId);
+      if (!Number.isInteger(alertId) || alertId <= 0) {
+        return res
+          .status(400)
+          .json({ success: false, message: "alertId tidak valid" });
+      }
+      const alert = await AlertService.resolveAlert(alertId);
+      if (!alert) {
+        return res
+          .status(404)
+          .json({ success: false, message: "Alert tidak ditemukan" });
+      }
+      res.json({ success: true, message: "Alert resolved", data: alert });
     } catch (error) {
+      console.error("❌ resolveAlert:", error.message);
       res.status(500).json({ success: false, error: error.message });
     }
   }
