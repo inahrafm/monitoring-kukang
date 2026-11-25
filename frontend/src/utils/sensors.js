@@ -1,19 +1,24 @@
+// Sensor yang ditampilkan & diunduh (dashboard, riwayat, CSV, Excel dokter).
 // Urutan & satuan sesuai kontrak data alat (nilai sudah dikalibrasi di firmware).
 export const SENSORS = [
   { key: "temperature", label: "Suhu", unit: "°C" },
   { key: "humidity", label: "Kelembapan", unit: "%" },
   { key: "light", label: "Cahaya", unit: "Lux" },
   { key: "noise", label: "Suara", unit: "dB" },
+];
+// Data kelistrikan alat: tetap disimpan backend, tapi sengaja TIDAK ditampilkan
+// atau diunduh (keputusan user: dokter hewan tidak perlu melihatnya).
+export const ELECTRICAL_SENSORS = [
   { key: "voltage", label: "Tegangan", unit: "V" },
   { key: "current", label: "Arus", unit: "mA" },
   { key: "power", label: "Daya", unit: "mW" },
 ];
 export const SENSOR_KEYS = SENSORS.map((s) => s.key);
-export const ENV_SENSOR_KEYS = ["temperature", "humidity", "light", "noise"];
+export const ENV_SENSOR_KEYS = SENSOR_KEYS;
 export const sensorMeta = (key) =>
-  SENSORS.find((s) => s.key === key) || { key, label: key, unit: "" };
+  [...SENSORS, ...ELECTRICAL_SENSORS].find((s) => s.key === key) || { key, label: key, unit: "" };
 
-// Ketujuh topic satu siklus dikirim berurutan (retry s.d. 3x), jam terimanya
+// Topic satu siklus dikirim berurutan (retry s.d. 3x), jam terimanya
 // bisa selisih beberapa detik. Gabungkan jadi satu baris bila masih dalam
 // CYCLE_WINDOW_MS dari pesan pertama siklus dan sensornya belum terisi.
 export const CYCLE_WINDOW_MS = 60 * 1000;

@@ -86,11 +86,12 @@ Log backend yang sehat: `✅ MQTT Broker connected (mqtt://103.197.189.18:1883)`
       port 80 / 3055 (Docker, melewati ufw) / 3004, cek `ufw status numbered` & `/var/log/ufw.log`.
       Opsi bila port diblokir di luar: proxy lewat nginx (80/443) yang sudah terbuka.
 - [x] Data alat tersimpan: `ROOM-01` (topic `ROOM-01/kukang/*`, client `ESP32_Kukang`, QoS 0, tiap ~5 menit).
-- [ ] **Perbaikan audit web/backend (kode siap di branch, belum di-deploy)** — urutan deploy WAJIB:
+- [ ] **Perbaikan audit web/backend (PR #4 merged, belum di-deploy)** — urutan deploy WAJIB:
   backup DB → jalankan `backend/migrations/2026-11-25-timestamptz-dan-sensor-daya.sql` → restart
   `kukang-backend` → build frontend. (Kode baru + skema lama, atau sebaliknya = jam bergeser 7 jam.)
-  Isi perbaikan: 7 sensor (`voltage` V, `current` mA, `power` mW) diterima & tampil (kartu, grafik,
-  tabel, CSV); kolom waktu `timestamptz` (data lama: `timestamp` = UTC, `created_at`/alerts = WIB,
+  Isi perbaikan: 7 sensor (`voltage` V, `current` mA, `power` mW) diterima & disimpan backend;
+  **keputusan user: data kelistrikan tidak ditampilkan & tidak ikut diunduh** (dokter hewan tidak
+  perlu) — frontend hanya suhu, kelembapan, cahaya, suara (`SENSORS` di `utils/sensors.js`); kolom waktu `timestamptz` (data lama: `timestamp` = UTC, `created_at`/alerts = WIB,
   sudah dicek selisih konsisten 07:00); frontend format WIB via `Intl` (`frontend/src/utils/time.js`),
   tanpa `+7 jam`; rata-rata 7/30 hari per hari WIB; grafik sumbu waktu, garis lurus, putus bila
   jeda >10 menit, pesan "Belum ada data"; tabel & CSV per siklus (pesan ≤60 dtk digabung,
@@ -127,3 +128,5 @@ Log backend yang sehat: `✅ MQTT Broker connected (mqtt://103.197.189.18:1883)`
   data lama konsisten UTC. Perbaikan kode + migrasi SQL (lihat TODO). Diuji Playwright dengan API
   tiruan & browser zona UTC: jam tampil WIB benar, celah terlihat, 7 kartu, tabel/CSV/Excel benar,
   tanpa scroll horizontal (desktop & HP).
+- **2026-11-25** — PR #4 merged. Keputusan user: tegangan/arus/daya disembunyikan dari dashboard,
+  pratinjau, CSV & Excel (tetap disimpan di DB).
