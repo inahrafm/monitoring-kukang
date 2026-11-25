@@ -85,7 +85,23 @@ Log backend yang sehat: `✅ MQTT Broker connected (mqtt://103.197.189.18:1883)`
       firewall di luar server. Langkah cek: IP publik laptop (`curl ifconfig.me`), bandingkan akses
       port 80 / 3055 (Docker, melewati ufw) / 3004, cek `ufw status numbered` & `/var/log/ufw.log`.
       Opsi bila port diblokir di luar: proxy lewat nginx (80/443) yang sudah terbuka.
-- [ ] Pastikan data alat benar-benar tersimpan (`✨ DATABASE` di log), dan cek tampilan dashboard + alert.
+- [x] Data alat tersimpan: `ROOM-01` (topic `ROOM-01/kukang/*`, client `ESP32_Kukang`, QoS 0, tiap ~5 menit).
+- [ ] **Audit web/backend 2026-11-25 (temuan, belum diperbaiki)**:
+  - Waktu: kolom `timestamp` = `timestamp without time zone`, isinya jam UTC; TZ server & PostgreSQL
+    `Asia/Jakarta`. node-pg membacanya sebagai WIB lalu frontend `+7 jam` → kebetulan benar di layar.
+    Rata-rata harian (7/30 hari) terpotong per hari UTC; statistik `NOW()-interval` geser 7 jam;
+    `created_at` berisi jam WIB. Rencana: migrasi ke `timestamptz` (`USING timestamp AT TIME ZONE 'UTC'`),
+    hapus `+7 jam` & hack ±420 menit di frontend, format pakai `timeZone: 'Asia/Jakarta'`.
+  - Backend hanya kenal 4 sensor; `voltage/current/power` dibuang. `sensor_type` adalah ENUM PostgreSQL
+    → perlu `ALTER TYPE ... ADD VALUE`.
+  - Tabel riwayat/Excel membulatkan ke bawah per 5 menit (17:17 → 17:15); grafik sumbu X kategori
+    (celah tidak terlihat, garis selalu tersambung).
+  - Ambang alert (cahaya 100–1000 lux, suara ≤70 dB) tidak cocok dengan kondisi nyata (2,7 lux, 75–80 dB).
+  - Mosquitto: tanpa ACL (semua user bisa baca/tulis semua topik), `queue_qos0_messages` tidak diset
+    (data QoS 0 hilang saat backend putus). `kukang_backend` unik, tidak bentrok dengan alat.
+  - Keamanan: 5432 listen `0.0.0.0` + ufw ALLOW Anywhere (terbuka publik); 3306/6380 hanya
+    127.0.0.1 (aturan ufw-nya sisa, tidak berbahaya). Jangan tutup 5432 sebelum dipastikan tidak
+    dipakai aplikasi lain dari luar.
 - [ ] Pastikan `pm2 save` sudah dijalankan setelah `kukang-frontend-3004` dibuat ulang.
 - [ ] Opsional: hapus PM2 id 50 & 51; `npm audit` frontend banyak peringatan (CRA lama).
 
@@ -98,3 +114,5 @@ Log backend yang sehat: `✅ MQTT Broker connected (mqtt://103.197.189.18:1883)`
 - **2026-11-25** — Deploy di server `mail` (PM2 `dev-server-ids`): update `.env` MQTT, restart
   `kukang-backend`, frontend jadi `pm2 serve` build statis di 3004. Masalah tersisa: akses dari
   laptop user timeout (sedang didiagnosis, lihat TODO).
+- **2026-11-25** — Verifikasi audit checklist web/backend terhadap kode + output VPS (lihat TODO
+  "Audit web/backend"). Belum ada perubahan kode.
