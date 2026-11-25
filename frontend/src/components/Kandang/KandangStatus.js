@@ -1,80 +1,68 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { getKandangReadings } from "../../services/api";
 import { FiCheckCircle, FiAlertCircle } from "react-icons/fi";
+import { fmtTime, fmtDate } from "../../utils/time";
 import "./KandangStatus.css";
 
+// Alat kirim tiap ~5 menit; offline bila > 15 menit tanpa data.
+const OFFLINE_AFTER_MIN = 15;
+
 const KandangStatus = ({ kandangId }) => {
-  const [status, setStatus] = useState({
-    online: false,
-    lastSeen: null,
-    lastSeenAgo: 0,
-  });
+  const [lastSeen, setLastSeen] = useState(null);
+  const [now, setNow] = useState(Date.now());
   const [loading, setLoading] = useState(true);
 
-  const checkKandangStatus = async () => {
+  const checkKandangStatus = useCallback(async () => {
     if (!kandangId) return;
     try {
       const response = await getKandangReadings(kandangId, null, 1);
       const readings = Array.isArray(response)
         ? response
         : response?.data?.data || response?.data || [];
-
-      if (readings.length > 0) {
-        const lastTimestamp = new Date(readings[0].timestamp);
-        const now = new Date();
-
-        // Hitung selisih dalam menit
-        let diffMinutes = Math.floor((now - lastTimestamp) / 60000);
-
-        // FIX TIMEZONE: Jika selisih sekitar 420 menit (7 jam),
-        // itu artinya data UTC vs lokal WIB. Kita normalisasi.
-        if (diffMinutes >= 415 && diffMinutes <= 425) {
-          diffMinutes = diffMinutes - 420;
-        }
-
-        // Jika selisih kurang dari 10 menit setelah normalisasi, anggap Online
-        setStatus({
-          online: Math.abs(diffMinutes) < 10,
-          lastSeen: lastTimestamp,
-          lastSeenAgo: Math.max(0, diffMinutes),
-        });
-      }
+      setLastSeen(readings.length > 0 ? new Date(readings[0].timestamp) : null);
+      setNow(Date.now());
     } catch (error) {
       console.error("Error checking status:", error);
     } finally {
       setLoading(false);
     }
-  };
+  }, [kandangId]);
 
   useEffect(() => {
     checkKandangStatus();
     const interval = setInterval(checkKandangStatus, 30000);
     return () => clearInterval(interval);
-  }, [kandangId]);
+  }, [checkKandangStatus]);
 
   if (loading) return null;
 
+  const agoMin = lastSeen ? Math.max(0, Math.floor((now - lastSeen) / 60000)) : null;
+  const online = agoMin !== null && agoMin <= OFFLINE_AFTER_MIN;
+  const isToday = lastSeen && fmtDate(lastSeen) === fmtDate(now);
+
   return (
     <div className="kandang-status-bar">
-      {status.online ? (
+      {online ? (
         <div className="status-badge online">
           <FiCheckCircle className="icon" />
-          <span>Sistem Online</span>
+          <span>Alat Online</span>
         </div>
       ) : (
         <div className="status-badge offline">
           <FiAlertCircle className="icon" />
-          <span>Offline ({status.lastSeenAgo} menit lalu)</span>
+          <span>
+            Offline{agoMin !== null ? ` (${agoMin} menit tanpa data)` : " (belum ada data)"}
+          </span>
         </div>
       )}
-      {status.lastSeen && (
+      {lastSeen && (
         <span className="last-update-text">
-          | Update Terakhir: {status.lastSeen.toLocaleTimeString("id-ID")}
+          | Terakhir terima data: {isToday ? "" : `${fmtDate(lastSeen)} `}
+          {fmtTime(lastSeen)} WIB
         </span>
       )}
     </div>
   );
 };
 
-// Pastikan export default ini ada dan namanya sama dengan const di atas!
 export default KandangStatus;

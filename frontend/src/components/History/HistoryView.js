@@ -5,6 +5,22 @@ import * as XLSX from "xlsx";
 import { useKandang } from "../../context/KandangContext";
 import { getKandangHistorical } from "../../services/api";
 import {
+  SENSORS,
+  SENSOR_KEYS,
+  ENV_SENSOR_KEYS,
+  sensorMeta,
+  groupCycles,
+  extractRows,
+} from "../../utils/sensors";
+import {
+  wibDayStart,
+  wibParts,
+  fmtDate,
+  fmtTime,
+  HOUR_MS,
+  DAY_MS,
+} from "../../utils/time";
+import {
   FiDownload,
   FiFileText,
   FiCalendar,
@@ -13,7 +29,28 @@ import {
 } from "react-icons/fi";
 import "./HistoryView.css";
 
-const SENSORS = ["temperature", "humidity", "light", "noise"];
+// Ambil data mentah semua sensor untuk rentang [start, end] -> { sensor: rows }
+const fetchAll = async (kandangId, keys, start, end) => {
+  const results = await Promise.all(
+    keys.map((s) =>
+      getKandangHistorical(kandangId, s, start.toISOString(), end.toISOString(), "raw"),
+    ),
+  );
+  const bySensor = {};
+  results.forEach((res, i) => {
+    bySensor[keys[i]] = extractRows(res);
+  });
+  return bySensor;
+};
+
+// Rentang hari WIB dari tanggal DatePicker (awal hari pertama s/d akhir hari terakhir)
+const wibRange = (startD, endD) => [
+  wibDayStart(startD),
+  new Date(wibDayStart(endD).getTime() + DAY_MS - 1),
+];
+
+const fmtVal = (v) => (v === undefined ? "" : Number(v).toFixed(2));
+const fileDate = (d) => fmtDate(wibDayStart(d)).replace(/\//g, "-");
 
 const HistoryView = () => {
   const { kandangList, selectedKandang: ctxKandang } = useKandang();
@@ -29,61 +66,21 @@ const HistoryView = () => {
   const [doctorDate, setDoctorDate] = useState(new Date());
 
   // State untuk CSV (range)
-  const [csvStartD, setCsvStartD] = useState(
-    new Date(new Date().setHours(0, 0, 0, 0)),
-  );
+  const [csvStartD, setCsvStartD] = useState(new Date());
   const [csvEndD, setCsvEndD] = useState(new Date());
 
   const [previewData, setPreviewData] = useState([]);
   const [loading, setLoading] = useState(false);
 
-  // Preview pakai range CSV
+  // Pratinjau: 10 siklus terbaru dalam rentang CSV, jam asli terima data (WIB)
   useEffect(() => {
     const loadPreview = async () => {
       if (!selectedKand) return;
       setLoading(true);
       try {
-        const queryStart = new Date(csvStartD);
-        queryStart.setHours(0, 0, 0, 0);
-        const queryEnd = new Date(csvEndD);
-        queryEnd.setHours(23, 59, 59, 999);
-
-        const results = await Promise.all(
-          SENSORS.map((s) =>
-            getKandangHistorical(
-              selectedKand,
-              s,
-              queryStart.toISOString(),
-              queryEnd.toISOString(),
-            ),
-          ),
-        );
-
-        const sensorMap = {};
-        results.forEach((res, idx) => {
-          const sensorKey = SENSORS[idx];
-          const d = Array.isArray(res?.data?.data)
-            ? res.data.data
-            : Array.isArray(res?.data)
-              ? res.data
-              : [];
-          d.forEach((r) => {
-            const dWib = new Date(
-              new Date(r.timestamp).getTime() + 7 * 60 * 60 * 1000,
-            );
-            const roundedMin = Math.floor(dWib.getMinutes() / 5) * 5;
-            const slotKey = `${String(dWib.getHours()).padStart(2, "0")}:${String(roundedMin).padStart(2, "0")}`;
-            if (!sensorMap[slotKey]) sensorMap[slotKey] = { slot: slotKey };
-            if (sensorMap[slotKey][sensorKey] === undefined) {
-              sensorMap[slotKey][sensorKey] = parseFloat(r.value).toFixed(2);
-            }
-          });
-        });
-
-        const sorted = Object.values(sensorMap)
-          .sort((a, b) => b.slot.localeCompare(a.slot))
-          .slice(0, 10);
-        setPreviewData(sorted);
+        const [start, end] = wibRange(csvStartD, csvEndD);
+        const bySensor = await fetchAll(selectedKand, SENSOR_KEYS, start, end);
+        setPreviewData(groupCycles(bySensor).reverse().slice(0, 10));
       } catch (e) {
         console.error("Gagal memuat pratinjau:", e);
       } finally {
@@ -94,73 +91,30 @@ const HistoryView = () => {
   }, [selectedKand, csvStartD, csvEndD]);
 
   // ── Download Excel untuk Dokter (single date, ethogram) ──────────────────
+  // Format lembar pengamatan per slot 5 menit (sengaja dibulatkan): satu slot
+  // diisi siklus data pertama yang jam terimanya jatuh di slot itu.
   const downloadDoctor = async () => {
     try {
-      // Ambil data dari jam 18:00 tanggal terpilih s/d 06:00 tanggal berikutnya
-      const queryStart = new Date(doctorDate);
-      queryStart.setHours(18, 0, 0, 0);
-      const queryEnd = new Date(doctorDate);
-      queryEnd.setDate(queryEnd.getDate() + 1);
-      queryEnd.setHours(6, 0, 0, 0);
+      const day0 = wibDayStart(doctorDate); // 00:00 WIB tanggal terpilih
+      const queryStart = new Date(day0.getTime() + 18 * HOUR_MS);
+      const queryEnd = new Date(day0.getTime() + 30 * HOUR_MS); // 06:00 WIB besok
 
-      const results = await Promise.all(
-        SENSORS.map((s) =>
-          getKandangHistorical(
-            selectedKand,
-            s,
-            queryStart.toISOString(),
-            queryEnd.toISOString(),
-          ),
-        ),
-      );
-
+      const bySensor = await fetchAll(selectedKand, ENV_SENSOR_KEYS, queryStart, queryEnd);
       const sensorMap = {};
-      results.forEach((res, idx) => {
-        const sensorKey = SENSORS[idx];
-        const d = Array.isArray(res?.data?.data)
-          ? res.data.data
-          : Array.isArray(res?.data)
-            ? res.data
-            : [];
-        d.forEach((r) => {
-          const dUtc = new Date(r.timestamp);
-          const dWib = new Date(dUtc.getTime() + 7 * 60 * 60 * 1000);
-          const roundedMin = Math.floor(dWib.getMinutes() / 5) * 5;
-          const slotKey = `${String(dWib.getHours()).padStart(2, "0")}:${String(roundedMin).padStart(2, "0")}`;
-          if (!sensorMap[slotKey]) sensorMap[slotKey] = {};
-          if (sensorMap[slotKey][sensorKey] === undefined) {
-            sensorMap[slotKey][sensorKey] = parseFloat(r.value).toFixed(2);
-          }
-        });
+      groupCycles(bySensor).forEach((row) => {
+        const p = wibParts(row.t);
+        const slot = `${p.hour}:${String(Math.floor(Number(p.minute) / 5) * 5).padStart(2, "0")}`;
+        if (!sensorMap[slot]) sensorMap[slot] = row;
       });
 
-      // Sesi pengamatan
-      // Tanggal sesi: 18:00–20:00 = tanggal doctorDate
-      //               00:00–02:00 & 04:00–06:00 = doctorDate + 1
-      const nextDate = new Date(doctorDate);
-      nextDate.setDate(nextDate.getDate() + 1);
-
-      const fmt = (d) => d.toLocaleDateString("id-ID");
+      // Tanggal sesi: 18:00–20:00 = tanggal terpilih; 00:00–02:00 & 04:00–06:00 = besoknya
+      const dateStr = fmtDate(day0);
+      const nextStr = fmtDate(day0.getTime() + DAY_MS);
 
       const SESSIONS = [
-        {
-          label: "Waktu bangun (18:00–20:00)",
-          startHour: 18,
-          endHour: 20,
-          date: doctorDate,
-        },
-        {
-          label: "Waktu aktif (00:00–02:00)",
-          startHour: 0,
-          endHour: 2,
-          date: nextDate,
-        },
-        {
-          label: "Waktu sebelum tidur (04:00–06:00)",
-          startHour: 4,
-          endHour: 6,
-          date: nextDate,
-        },
+        { label: "Waktu bangun (18:00–20:00)", startHour: 18, endHour: 20, date: dateStr },
+        { label: "Waktu aktif (00:00–02:00)", startHour: 0, endHour: 2, date: nextStr },
+        { label: "Waktu sebelum tidur (04:00–06:00)", startHour: 4, endHour: 6, date: nextStr },
       ];
 
       const generateSlots = (startHour, endHour) => {
@@ -168,34 +122,40 @@ const HistoryView = () => {
         for (let h = startHour; h <= endHour; h++) {
           const maxMin = h === endHour ? 0 : 55;
           for (let m = 0; m <= maxMin; m += 5) {
-            slots.push(
-              `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`,
-            );
+            slots.push(`${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`);
           }
         }
         return slots;
       };
 
-      // +1 kolom Tanggal di depan Waktu
-      const TOTAL_COLS = 3 + SENSORS.length; // Tanggal | Waktu | Catatan | sensors...
+      const header = ENV_SENSOR_KEYS.map((k) => {
+        const m = sensorMeta(k);
+        return `${m.label} (${m.unit})`;
+      });
+      const TOTAL_COLS = 3 + ENV_SENSOR_KEYS.length; // Tanggal | Waktu | Catatan | sensors...
       const aoa = [];
 
-      // Judul
       const titleRow = Array(TOTAL_COLS).fill("");
       titleRow[0] = "Pengamatan Perilaku Kukang Jawa";
       aoa.push(titleRow);
       aoa.push(Array(TOTAL_COLS).fill(""));
 
-      // Metadata
       const metaRow = Array(TOTAL_COLS).fill("");
       metaRow[0] = "Kandang";
       metaRow[1] = selectedKand;
       metaRow[2] = "Tanggal :";
-      metaRow[3] = `${fmt(doctorDate)} – ${fmt(nextDate)}`;
+      metaRow[3] = `${dateStr} – ${nextStr}`;
       aoa.push(metaRow);
+      const noteRow = Array(TOTAL_COLS).fill("");
+      noteRow[0] =
+        "Waktu = slot 5 menit (WIB); nilai = data pertama yang diterima dalam slot tersebut.";
+      aoa.push(noteRow);
       aoa.push(Array(TOTAL_COLS).fill(""));
 
-      const merges = [{ s: { r: 0, c: 0 }, e: { r: 0, c: TOTAL_COLS - 1 } }];
+      const merges = [
+        { s: { r: 0, c: 0 }, e: { r: 0, c: TOTAL_COLS - 1 } },
+        { s: { r: 3, c: 0 }, e: { r: 3, c: TOTAL_COLS - 1 } },
+      ];
 
       SESSIONS.forEach((session, idx) => {
         const sessionRowIdx = aoa.length;
@@ -207,16 +167,17 @@ const HistoryView = () => {
           e: { r: sessionRowIdx, c: TOTAL_COLS - 1 },
         });
 
-        // Header kolom: Tanggal | Waktu | Catatan | sensors
-        aoa.push(["Tanggal", "Waktu", "Catatan", ...SENSORS]);
+        aoa.push(["Tanggal", "Waktu", "Catatan", ...header]);
 
         generateSlots(session.startHour, session.endHour).forEach((slot) => {
           const row = sensorMap[slot] || {};
           aoa.push([
-            fmt(session.date),
+            session.date,
             slot,
             "",
-            ...SENSORS.map((s) => (row[s] !== undefined ? Number(row[s]) : "")),
+            ...ENV_SENSOR_KEYS.map((s) =>
+              row[s] !== undefined ? Number(row[s].toFixed(2)) : "",
+            ),
           ]);
         });
 
@@ -231,96 +192,47 @@ const HistoryView = () => {
         { wch: 12 }, // Tanggal
         { wch: 10 }, // Waktu
         { wch: 25 }, // Catatan
-        { wch: 14 }, // temperature
-        { wch: 12 }, // humidity
-        { wch: 12 }, // light
-        { wch: 12 }, // noise
+        ...ENV_SENSOR_KEYS.map(() => ({ wch: 16 })),
       ];
       ws["!merges"] = merges;
       XLSX.utils.book_append_sheet(wb, ws, "Laporan Sensor");
 
-      const fmtFile = (d) => d.toLocaleDateString("id-ID").replace(/\//g, "-");
-      XLSX.writeFile(
-        wb,
-        `Laporan_Kukang_${selectedKand}_${fmtFile(doctorDate)}.xlsx`,
-      );
+      XLSX.writeFile(wb, `Laporan_Kukang_${selectedKand}_${fileDate(doctorDate)}.xlsx`);
     } catch (error) {
       console.error("Gagal mengunduh laporan:", error);
       alert("Gagal mengunduh laporan. Silakan coba lagi.");
     }
   };
 
-  // ── Download CSV (range, raw data) ───────────────────────────────────────
+  // ── Download CSV (range, data mentah per siklus) ─────────────────────────
   const downloadCSV = async () => {
     try {
-      const queryStart = new Date(csvStartD);
-      queryStart.setHours(0, 0, 0, 0);
-      const queryEnd = new Date(csvEndD);
-      queryEnd.setHours(23, 59, 59, 999);
+      const [start, end] = wibRange(csvStartD, csvEndD);
+      const bySensor = await fetchAll(selectedKand, SENSOR_KEYS, start, end);
+      const rows = groupCycles(bySensor);
 
-      const results = await Promise.all(
-        SENSORS.map((s) =>
-          getKandangHistorical(
-            selectedKand,
-            s,
-            queryStart.toISOString(),
-            queryEnd.toISOString(),
-          ),
-        ),
-      );
-
-      // Gabungkan semua data per timestamp (slot 5 menit) + simpan tanggal
-      const sensorMap = {};
-      results.forEach((res, idx) => {
-        const sensorKey = SENSORS[idx];
-        const d = Array.isArray(res?.data?.data)
-          ? res.data.data
-          : Array.isArray(res?.data)
-            ? res.data
-            : [];
-        d.forEach((r) => {
-          const dWib = new Date(
-            new Date(r.timestamp).getTime() + 7 * 60 * 60 * 1000,
-          );
-          const roundedMin = Math.floor(dWib.getMinutes() / 5) * 5;
-          const dateStr = dWib.toLocaleDateString("id-ID");
-          const timeStr = `${String(dWib.getHours()).padStart(2, "0")}:${String(roundedMin).padStart(2, "0")}`;
-          const slotKey = `${dateStr}_${timeStr}`;
-
-          if (!sensorMap[slotKey]) {
-            sensorMap[slotKey] = { date: dateStr, time: timeStr };
-          }
-          if (sensorMap[slotKey][sensorKey] === undefined) {
-            sensorMap[slotKey][sensorKey] = parseFloat(r.value).toFixed(2);
-          }
-        });
-      });
-
-      const sorted = Object.values(sensorMap).sort((a, b) => {
-        const ka = `${a.date}_${a.time}`;
-        const kb = `${b.date}_${b.time}`;
-        return ka.localeCompare(kb);
-      });
-
-      // Buat CSV
-      const header = ["timestamp", "tanggal", "waktu", ...SENSORS].join(",");
-      const rows = sorted.map((r) => {
-        const ts = `${r.date} ${r.time}`;
+      const header = [
+        "timestamp_utc",
+        "tanggal_wib",
+        "jam_wib",
+        ...SENSORS.map((s) => `${s.key}_${s.unit.replace("°", "")}`),
+      ].join(",");
+      const lines = rows.map((r) => {
+        const p = wibParts(r.t);
         return [
-          ts,
-          r.date,
-          r.time,
-          ...SENSORS.map((s) => (r[s] !== undefined ? r[s] : "")),
+          new Date(r.t).toISOString(),
+          fmtDate(r.t),
+          `${p.hour}:${p.minute}:${p.second}`,
+          ...SENSOR_KEYS.map((k) => fmtVal(r[k])),
         ].join(",");
       });
 
-      const csvContent = [header, ...rows].join("\n");
+      const csvContent = [header, ...lines].join("\n");
       const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      const fmtFile = (d) => d.toLocaleDateString("id-ID").replace(/\//g, "-");
-      a.download = `Data_Sensor_${selectedKand}_${fmtFile(csvStartD)}_${fmtFile(csvEndD)}.csv`;
+      a.download = `Data_Sensor_${selectedKand}_${fileDate(csvStartD)}_${fileDate(csvEndD)}.csv`;
       a.click();
       URL.revokeObjectURL(url);
     } catch (error) {
@@ -406,6 +318,9 @@ const HistoryView = () => {
         {/* ── Preview Card ── */}
         <div className="preview-card">
           <h3>Pratinjau Data (Waktu Indonesia Barat)</h3>
+          <p style={{ fontSize: "0.8rem", color: "#64748b", margin: "0 0 0.5rem" }}>
+            10 siklus terbaru; jam = waktu data diterima server.
+          </p>
           {loading ? (
             <div className="loader-mini">Memproses data...</div>
           ) : (
@@ -413,28 +328,30 @@ const HistoryView = () => {
               <table className="table-mini">
                 <thead>
                   <tr>
+                    <th>Tanggal</th>
                     <th>Jam (WIB)</th>
-                    <th>Suhu (°C)</th>
-                    <th>Kelembapan (%)</th>
-                    <th>Cahaya (Lux)</th>
-                    <th>Suara (dB)</th>
+                    {SENSORS.map((m) => (
+                      <th key={m.key}>
+                        {m.label} ({m.unit})
+                      </th>
+                    ))}
                   </tr>
                 </thead>
                 <tbody>
                   {previewData.length > 0 ? (
-                    previewData.map((r, i) => (
-                      <tr key={i}>
-                        <td>{r.slot}</td>
-                        <td>{r.temperature ?? "-"}</td>
-                        <td>{r.humidity ?? "-"}</td>
-                        <td>{r.light ?? "-"}</td>
-                        <td>{r.noise ?? "-"}</td>
+                    previewData.map((r) => (
+                      <tr key={r.t}>
+                        <td>{fmtDate(r.t)}</td>
+                        <td>{fmtTime(r.t)}</td>
+                        {SENSOR_KEYS.map((k) => (
+                          <td key={k}>{r[k] !== undefined ? r[k].toFixed(2) : "-"}</td>
+                        ))}
                       </tr>
                     ))
                   ) : (
                     <tr>
                       <td
-                        colSpan="5"
+                        colSpan={2 + SENSORS.length}
                         style={{
                           textAlign: "center",
                           padding: "40px",

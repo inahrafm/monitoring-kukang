@@ -8,12 +8,25 @@ const MAX_FUTURE_MS = 24 * 60 * 60 * 1000;
 
 class MQTTService {
   constructor() {
-    this.sensorTypes = ["temperature", "humidity", "light", "noise"];
+    // Harus sama dengan ENUM sensor_type di PostgreSQL (lihat backend/migrations).
+    this.sensorTypes = [
+      "temperature",
+      "humidity",
+      "light",
+      "noise",
+      "voltage",
+      "current",
+      "power",
+    ];
+    // Nilai sudah dikalibrasi di firmware; disimpan apa adanya.
     this.unitMap = {
       temperature: "°C",
       humidity: "%",
       light: "Lux",
       noise: "dB",
+      voltage: "V",
+      current: "mA",
+      power: "mW",
     };
     this.activeKandang = new Map();
     this.initialized = false;
@@ -112,8 +125,8 @@ class MQTTService {
   }
 
   getActiveKandang() {
-    // Kandang dianggap aktif bila mengirim data dalam 5 menit terakhir
-    const ACTIVE_WINDOW_MS = 5 * 60 * 1000;
+    // Alat kirim tiap ~5 menit; dianggap aktif bila ada data dalam 15 menit terakhir
+    const ACTIVE_WINDOW_MS = 15 * 60 * 1000;
     const now = Date.now();
     return Array.from(this.activeKandang.entries()).map(([id, lastSeen]) => ({
       kandang_id: id,

@@ -24,7 +24,7 @@
 }
 .history-grid {
   display: grid;
-  grid-template-columns: 350px 1fr;
+  grid-template-columns: 350px minmax(0, 1fr);
   gap: 20px;
 }
 .filter-card,
@@ -102,4 +102,16 @@
   .history-grid {
     grid-template-columns: 1fr;
   }
+}
+
+/* 9 kolom (tanggal, jam, 7 sensor): gulir horizontal di dalam kartu saja */
+.preview-card {
+  min-width: 0;
+}
+.table-mini-wrapper {
+  overflow-x: auto;
+}
+.table-mini td,
+.table-mini th {
+  white-space: nowrap;
 }

@@ -1,6 +1,14 @@
 import React from "react";
 import "./SensorCard.css";
-import { FiThermometer, FiDroplet, FiSun, FiVolume2 } from "react-icons/fi";
+import {
+  FiThermometer,
+  FiDroplet,
+  FiSun,
+  FiVolume2,
+  FiBatteryCharging,
+  FiActivity,
+  FiZap,
+} from "react-icons/fi";
 
 const SensorCard = ({ type, data, statistics, kandangId }) => {
   const getIcon = () => {
@@ -13,6 +21,12 @@ const SensorCard = ({ type, data, statistics, kandangId }) => {
         return <FiSun className="sensor-icon" />;
       case "noise":
         return <FiVolume2 className="sensor-icon" />;
+      case "voltage":
+        return <FiBatteryCharging className="sensor-icon" />;
+      case "current":
+        return <FiActivity className="sensor-icon" />;
+      case "power":
+        return <FiZap className="sensor-icon" />;
       default:
         return null;
     }
@@ -24,6 +38,9 @@ const SensorCard = ({ type, data, statistics, kandangId }) => {
       humidity: "Kelembapan",
       light: "Intensitas Cahaya",
       noise: "Tingkat Kebisingan",
+      voltage: "Tegangan",
+      current: "Arus",
+      power: "Daya",
     };
     return titles[type] || type;
   };
@@ -34,6 +51,9 @@ const SensorCard = ({ type, data, statistics, kandangId }) => {
       humidity: "%",
       light: "Lux",
       noise: "dB",
+      voltage: "V",
+      current: "mA",
+      power: "mW",
     };
     return units[type] || "";
   };

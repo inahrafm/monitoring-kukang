@@ -63,23 +63,23 @@ class SensorModel {
     let query;
     const values = [kandangId, sensorType, startTime, endTime];
 
-    // AGREGASI: Jika 7 hari atau 30 hari, kelompokkan data per TANGGAL (1 hari = 1 data)
+    // AGREGASI 7/30 hari: rata-rata per hari kalender WIB (kolom timestamptz).
     if (rangeType === "7d" || rangeType === "30d") {
       query = `
-        SELECT 
-          date_trunc('day', timestamp) as timestamp, 
-          AVG(value) as value, 
-          'avg' as unit
-        FROM sensor_readings 
+        SELECT
+          date_trunc('day', timestamp AT TIME ZONE 'Asia/Jakarta') AT TIME ZONE 'Asia/Jakarta' AS timestamp,
+          AVG(value) AS value,
+          COUNT(*) AS samples
+        FROM sensor_readings
         WHERE kandang_id = $1 AND sensor_type = $2 AND timestamp BETWEEN $3 AND $4
-        GROUP BY date_trunc('day', timestamp) 
-        ORDER BY timestamp ASC`;
+        GROUP BY 1
+        ORDER BY 1 ASC`;
     } else {
-      // DATA MENTAH: Untuk grafik 24 jam (Hari Ini)
+      // DATA MENTAH (grafik 24 jam, pratinjau & CSV hingga 31 hari ≈ 9 ribu titik/sensor)
       query = `
-        SELECT * FROM sensor_readings 
+        SELECT * FROM sensor_readings
         WHERE kandang_id = $1 AND sensor_type = $2 AND timestamp BETWEEN $3 AND $4
-        ORDER BY timestamp ASC LIMIT 2000`;
+        ORDER BY timestamp ASC LIMIT 20000`;
     }
 
     const result = await db.query(query, values);
