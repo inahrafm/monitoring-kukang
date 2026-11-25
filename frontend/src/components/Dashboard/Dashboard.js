@@ -2,31 +2,17 @@ import React, { useState, useEffect, useCallback } from "react";
 import { useKandang } from "../../context/KandangContext";
 import { getLatestReadings, getKandangStatistics } from "../../services/api";
 import KandangSelector from "../Kandang/KandangSelector";
+import KandangStatus from "../Kandang/KandangStatus";
 import SensorCard from "./SensorCard";
 import SensorChart from "../Charts/SensorChart";
 import AlertPanel from "../Alerts/AlertPanel";
 import { motion } from "framer-motion";
+import { SENSOR_KEYS, sensorMeta } from "../../utils/sensors";
+import { fmtDateTime } from "../../utils/time";
 import "./Dashboard.css";
 
-// Fungsi untuk format tanggal ke UTC+7 (WIB) - HANYA UNTUK FOOTER
-const formatToWIB = (timestamp) => {
-  if (!timestamp) return "—";
-  
-  const date = new Date(timestamp);
-  
-  // Tambah 7 jam untuk UTC+7
-  const wibDate = new Date(date.getTime() + (7 * 60 * 60 * 1000));
-  
-  // Format: 24 Mar 2026 14:30:25
-  return wibDate.toLocaleString('id-ID', {
-    day: '2-digit',
-    month: 'short',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-    hour12: false
-  });
-};
+const formatToWIB = (timestamp) =>
+  timestamp ? `${fmtDateTime(timestamp)} WIB` : "—";
 
 const Dashboard = () => {
   const {
@@ -90,12 +76,13 @@ const Dashboard = () => {
         <div className="header-left">
           <h1>Monitoring Kukang</h1>
           <KandangSelector />
+          <KandangStatus kandangId={selectedKandang} />
         </div>
       </div>
 
       {/* Sensor Cards dengan indikator dipilih */}
       <div className="sensors-grid">
-        {["temperature", "humidity", "light", "noise"].map((s) => (
+        {SENSOR_KEYS.map((s) => (
           <div
             key={s}
             onClick={() => setActiveSensor(s)}
@@ -117,7 +104,7 @@ const Dashboard = () => {
       <div className="dashboard-main">
         <div className="chart-card">
           <div className="chart-header">
-            <h3>Grafik {activeSensor.toUpperCase()}</h3>
+            <h3>Grafik {sensorMeta(activeSensor).label} ({sensorMeta(activeSensor).unit})</h3>
             <select
               value={timeRange}
               onChange={(e) => setTimeRange(e.target.value)}
@@ -139,7 +126,6 @@ const Dashboard = () => {
 
           <div className="chart-footer">
             <div>Sensor ID: {readings[activeSensor]?.sensor_id || '—'}</div>
-            {/* HANYA BAGIAN INI YANG DIUBAH KE UTC+7 */}
             <div>Update: {formatToWIB(readings[activeSensor]?.timestamp)}</div>
           </div>
         </div>

@@ -85,7 +85,30 @@ Log backend yang sehat: `✅ MQTT Broker connected (mqtt://103.197.189.18:1883)`
       firewall di luar server. Langkah cek: IP publik laptop (`curl ifconfig.me`), bandingkan akses
       port 80 / 3055 (Docker, melewati ufw) / 3004, cek `ufw status numbered` & `/var/log/ufw.log`.
       Opsi bila port diblokir di luar: proxy lewat nginx (80/443) yang sudah terbuka.
-- [ ] Pastikan data alat benar-benar tersimpan (`✨ DATABASE` di log), dan cek tampilan dashboard + alert.
+- [x] Data alat tersimpan: `ROOM-01` (topic `ROOM-01/kukang/*`, client `ESP32_Kukang`, QoS 0, tiap ~5 menit).
+- [ ] **Perbaikan audit web/backend (kode siap di branch, belum di-deploy)** — urutan deploy WAJIB:
+  backup DB → jalankan `backend/migrations/2026-11-25-timestamptz-dan-sensor-daya.sql` → restart
+  `kukang-backend` → build frontend. (Kode baru + skema lama, atau sebaliknya = jam bergeser 7 jam.)
+  Isi perbaikan: 7 sensor (`voltage` V, `current` mA, `power` mW) diterima & tampil (kartu, grafik,
+  tabel, CSV); kolom waktu `timestamptz` (data lama: `timestamp` = UTC, `created_at`/alerts = WIB,
+  sudah dicek selisih konsisten 07:00); frontend format WIB via `Intl` (`frontend/src/utils/time.js`),
+  tanpa `+7 jam`; rata-rata 7/30 hari per hari WIB; grafik sumbu waktu, garis lurus, putus bila
+  jeda >10 menit, pesan "Belum ada data"; tabel & CSV per siklus (pesan ≤60 dtk digabung,
+  `frontend/src/utils/sensors.js`) dengan jam asli; Excel dokter tetap slot 5 menit + keterangan;
+  status "Alat Online/Offline" (>15 menit) + "Terakhir terima data HH:mm WIB" dipasang di dashboard;
+  batas data mentah 2000 → 20000 (CSV 31 hari tidak terpotong).
+- [ ] **Keputusan user**: ambang alert cahaya (100–1000 lux) & suara (≤70 dB) di `SensorModel.getThresholds`
+  tidak cocok dengan kondisi nyata (2,7 lux, 75–80 dB) → alert terus muncul. Ambang di kartu
+  (`SensorCard`, badge disembunyikan) juga beda dengan backend.
+- [ ] Mosquitto (broker dipakai bersama MIRRA): tanpa ACL (semua user baca/tulis semua topik);
+  `queue_qos0_messages` tidak diset (data QoS 0 hilang saat backend putus). `passwd` sudah
+  `root:mosquitto 640`. `kukang_backend` unik, tidak bentrok dengan `ESP32_Kukang`.
+- [ ] Keamanan PostgreSQL 5432: listen `0.0.0.0`, ufw ALLOW Anywhere, `pg_hba` mengizinkan user `dev` &
+  `organ1c` dari `0.0.0.0/0` (md5) dan `root` dari 46.250.227.91; ada koneksi dari container Docker
+  (172.19.0.2). Bukan milik kukang (`kukang_user` hanya localhost) → putuskan bersama admin server,
+  jangan tutup sepihak. 3306/6380 hanya listen 127.0.0.1 (aturan ufw sisa, tidak berbahaya).
+- [ ] Broker lama 38.47.176.109: tidak ada koneksi di `ss`; tcpdump sebelumnya salah interface
+  (`veth...`), ulangi dengan `-i any`.
 - [ ] Pastikan `pm2 save` sudah dijalankan setelah `kukang-frontend-3004` dibuat ulang.
 - [ ] Opsional: hapus PM2 id 50 & 51; `npm audit` frontend banyak peringatan (CRA lama).
 
@@ -98,3 +121,9 @@ Log backend yang sehat: `✅ MQTT Broker connected (mqtt://103.197.189.18:1883)`
 - **2026-11-25** — Deploy di server `mail` (PM2 `dev-server-ids`): update `.env` MQTT, restart
   `kukang-backend`, frontend jadi `pm2 serve` build statis di 3004. Masalah tersisa: akses dari
   laptop user timeout (sedang didiagnosis, lihat TODO).
+- **2026-11-25** — Verifikasi audit checklist web/backend terhadap kode + output VPS (lihat TODO
+  "Audit web/backend"). Belum ada perubahan kode.
+- **2026-11-25** — Cek VPS: voltage/current/power ditolak backend (log err), ENUM `sensor_type` 4 nilai,
+  data lama konsisten UTC. Perbaikan kode + migrasi SQL (lihat TODO). Diuji Playwright dengan API
+  tiruan & browser zona UTC: jam tampil WIB benar, celah terlihat, 7 kartu, tabel/CSV/Excel benar,
+  tanpa scroll horizontal (desktop & HP).
